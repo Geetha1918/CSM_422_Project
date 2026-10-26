@@ -57,9 +57,13 @@ header[data-testid="stHeader"] { background: rgba(244,247,242,.92); }
 .panel { background:#fff; border:1px solid #d9e6de; border-radius:20px; padding:1.2rem 1.35rem; box-shadow:0 6px 20px rgba(27,70,55,.06); }
 .small-note { color:#5b6b65; font-size:.9rem; }
 div[data-testid="stMetric"] { background:#fff; border:1px solid #d9e6de; border-radius:16px; padding:.9rem; }
+div[data-testid="stMetricLabel"] p, div[data-testid="stMetricValue"] { color:#17332b !important; }
+div[data-testid="stRadio"] label p { color:#17332b !important; font-weight:600; }
+div[data-testid="stAlert"] p, div[data-testid="stAlert"] div { color:#17332b !important; }
+div[data-testid="stAlert"] { border-radius:14px; }
 div[data-testid="stFileUploader"] { background:#fff; border:2px dashed #75ac8a; border-radius:18px; padding:.45rem; }
 </style>
-<section class="hero"><div class="tag">COURSE PROJECT • NEURAL NETWORK DEMO</div><h1>EcoSort Lab ♻</h1><p>Explore how a feedforward neural network helps classify everyday waste.</p></section>
+<section class="hero"><div class="tag">INTELLIGENT WASTE SORTING • LIVE DEMO</div><h1>EcoSort Lab ♻</h1><p>Explore how a feedforward neural network helps classify everyday waste.</p></section>
 """, unsafe_allow_html=True)
 
 train_counts = counts("train") if (ROOT / "data" / "train").exists() else [0, 0, 0]
