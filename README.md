@@ -43,9 +43,27 @@ Biodegradable / Recyclable / Non-recyclable
 
 For a batch of `m` images, input `X` has dimension `(m, 1024)`. The first layer uses `Z1 = XW1 + b1`, so its output is `(m, 64)`. This is the vectorized feedforward implementation.
 
+## Download and prepare the dataset
+
+The repository includes a script that downloads the public **TrashNet** dataset (about 41 MB) and makes a reproducible 80/20 train/test split. It maps its six original categories into the three categories used by this project:
+
+| TrashNet source class | Project class |
+| --- | --- |
+| cardboard, paper | biodegradable |
+| glass, metal, plastic | recyclable |
+| trash | non-recyclable |
+
+Run this once, after installing the requirements:
+
+```bash
+python download_dataset.py --data-dir data
+```
+
+The script downloads images locally but does not commit them to GitHub, keeping the repository small and respecting the source dataset's distribution. TrashNet was created by Gary Thung and Mindy Yang; cite its [original repository](https://github.com/garythung/trashnet) in your report.
+
 ## Dataset layout
 
-Place images (`.jpg`, `.jpeg`, `.png`) into this structure. Use your own photographed waste images or a public waste-image dataset, then organize its labels into these three folders.
+The download script creates this structure automatically. You may instead place your own photographed waste images (`.jpg`, `.jpeg`, `.png`) into it.
 
 ```text
 data/
@@ -67,6 +85,7 @@ Suggested examples: biodegradable = food scraps, leaves, paper; recyclable = pla
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+python download_dataset.py --data-dir data
 ```
 
 ## Run training
