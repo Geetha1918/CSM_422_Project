@@ -1,4 +1,4 @@
-"""Streamlit interface for presenting the Smart Waste Classification project."""
+"""A custom presentation interface for the Smart Waste Classification project."""
 
 from __future__ import annotations
 
@@ -12,107 +12,118 @@ from PIL import Image
 from src.data_loader import CLASS_NAMES
 from src.neural_network import WasteNeuralNetwork
 
-
-PROJECT_ROOT = Path(__file__).parent
-OUTPUT_DIR = PROJECT_ROOT / "outputs"
+ROOT = Path(__file__).parent
+OUTPUTS = ROOT / "outputs"
+IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png"}
 
 
 @st.cache_resource
-def load_trained_model() -> WasteNeuralNetwork | None:
-    """Load the weights produced by train.py, if training has been completed."""
-    model_path = OUTPUT_DIR / "model_weights.npz"
-    if not model_path.exists():
+def load_model() -> WasteNeuralNetwork | None:
+    weight_file = OUTPUTS / "model_weights.npz"
+    if not weight_file.exists():
         return None
-    saved = np.load(model_path)
-    model = WasteNeuralNetwork(
-        input_size=saved["W1"].shape[0],
-        hidden_sizes=(saved["W1"].shape[1], saved["W2"].shape[1]),
-        output_size=saved["W3"].shape[1],
-    )
-    model.parameters = {name: saved[name] for name in saved.files}
+    saved = np.load(weight_file)
+    model = WasteNeuralNetwork(saved["W1"].shape[0], (saved["W1"].shape[1], saved["W2"].shape[1]), saved["W3"].shape[1])
+    model.parameters = {key: saved[key] for key in saved.files}
     return model
 
 
-def prepare_image(image_bytes: bytes) -> tuple[Image.Image, Image.Image, np.ndarray]:
-    """Display the original image and create the 32 x 32 grayscale model input."""
-    original = Image.open(BytesIO(image_bytes)).convert("RGB")
-    resized = original.convert("L").resize((32, 32))
-    features = np.asarray(resized, dtype=np.float64).reshape(1, -1) / 255.0
-    return original, resized, features
+def prepare_image(contents: bytes) -> tuple[Image.Image, Image.Image, np.ndarray]:
+    original = Image.open(BytesIO(contents)).convert("RGB")
+    small = original.convert("L").resize((32, 32))
+    pixels = np.asarray(small, dtype=np.float64).reshape(1, -1) / 255.0
+    return original, small, pixels
 
 
-def count_images(data_dir: Path) -> dict[str, int]:
-    return {
-        class_name: len([file for file in (data_dir / class_name).glob("*") if file.suffix.lower() in {".jpg", ".jpeg", ".png"}])
-        for class_name in CLASS_NAMES
-    }
+def counts(split: str) -> list[int]:
+    return [len([f for f in (ROOT / "data" / split / name).glob("*") if f.suffix.lower() in IMAGE_SUFFIXES]) for name in CLASS_NAMES]
 
 
-st.set_page_config(page_title="Smart Waste Classifier", page_icon="♻️", layout="wide")
-st.title("♻️ Smart Waste Classification")
-st.caption("An educational deep-learning project for waste segregation")
+def label(index: int) -> str:
+    return CLASS_NAMES[index].replace("_", " ").title()
 
-st.sidebar.header("Project details")
-st.sidebar.write("Model: Multilayer Perceptron (NumPy)")
-st.sidebar.write("Input: 32 × 32 grayscale image = 1024 pixel values")
-st.sidebar.write("Architecture: 1024 → 64 → 32 → 3")
-st.sidebar.write("Output: Biodegradable, Recyclable, Non-recyclable")
 
-predict_tab, results_tab, explanation_tab = st.tabs(["Predict Waste Type", "Training Results", "How It Works"])
+st.set_page_config(page_title="EcoSort Lab", page_icon="♻️", layout="wide", initial_sidebar_state="collapsed")
+st.markdown("""
+<style>
+.stApp { background: #f4f7f2; color: #17332b; }
+header[data-testid="stHeader"] { background: rgba(244,247,242,.92); }
+#MainMenu, footer { visibility: hidden; }
+.block-container { padding-top: 2rem; max-width: 1180px; }
+.hero { background: linear-gradient(125deg,#0d4a3a,#16735d 62%,#d4a72c); padding:2.25rem 2.5rem; border-radius:28px; color:#fff; margin-bottom:1.5rem; }
+.hero h1 { margin:0; font-size:2.7rem; letter-spacing:-.04em; }
+.hero p { margin:.5rem 0 0; color:#dbf5e8; font-size:1.08rem; }
+.tag { display:inline-block; margin-bottom:.65rem; padding:.28rem .75rem; border:1px solid #a7d9be; border-radius:999px; color:#dffbe8; font-size:.82rem; }
+.panel { background:#fff; border:1px solid #d9e6de; border-radius:20px; padding:1.2rem 1.35rem; box-shadow:0 6px 20px rgba(27,70,55,.06); }
+.small-note { color:#5b6b65; font-size:.9rem; }
+div[data-testid="stMetric"] { background:#fff; border:1px solid #d9e6de; border-radius:16px; padding:.9rem; }
+div[data-testid="stFileUploader"] { background:#fff; border:2px dashed #75ac8a; border-radius:18px; padding:.45rem; }
+</style>
+<section class="hero"><div class="tag">COURSE PROJECT • NEURAL NETWORK DEMO</div><h1>EcoSort Lab ♻</h1><p>Explore how a feedforward neural network helps classify everyday waste.</p></section>
+""", unsafe_allow_html=True)
 
-with predict_tab:
-    st.subheader("Upload a waste image")
-    st.write("Choose a JPG or PNG image. The trained model will predict its disposal category.")
-    upload = st.file_uploader("Waste image", type=["jpg", "jpeg", "png"])
-    model = load_trained_model()
+train_counts = counts("train") if (ROOT / "data" / "train").exists() else [0, 0, 0]
+test_counts = counts("test") if (ROOT / "data" / "test").exists() else [0, 0, 0]
+metrics = st.columns(4)
+metrics[0].metric("Training images", f"{sum(train_counts):,}")
+metrics[1].metric("Test images", f"{sum(test_counts):,}")
+metrics[2].metric("Input vector", "1,024")
+metrics[3].metric("Output classes", "3")
+
+page = st.radio("Navigation", ["Classify an item", "Experiment results", "Neural network flow"], horizontal=True, label_visibility="collapsed")
+
+if page == "Classify an item":
+    st.subheader("Try a waste image")
+    st.write("Upload one clear photo of an item against a plain background. JPG, JPEG and PNG are supported.")
+    upload = st.file_uploader("Choose an image", type=["jpg", "jpeg", "png"], label_visibility="collapsed")
+    model = load_model()
     if model is None:
-        st.warning("No trained weights found. Run `python train.py --data-dir data ...` before using predictions.")
-    elif upload is not None:
-        original, resized, features = prepare_image(upload.getvalue())
-        probabilities, _ = model.forward(features)
+        st.error("Model weights are not available. Run the training command before using this page.")
+    elif upload is None:
+        st.info("For a fair demo, use one photographed item. Transparent PNGs, watermarked images, dark photos, and multiple objects may be unreliable.")
+    else:
+        original, small, pixels = prepare_image(upload.getvalue())
+        probabilities, _ = model.forward(pixels)
         probabilities = probabilities[0]
-        predicted_index = int(np.argmax(probabilities))
-        columns = st.columns(2)
-        with columns[0]:
-            st.image(original, caption="Uploaded image", use_container_width=True)
-        with columns[1]:
-            st.image(resized.resize((256, 256)), caption="Model input: 32 × 32 grayscale", use_container_width=True)
-        st.success(f"Prediction: **{CLASS_NAMES[predicted_index].replace('_', ' ').title()}**")
-        st.metric("Confidence", f"{probabilities[predicted_index] * 100:.1f}%")
-        st.bar_chart({name.replace("_", " ").title(): float(probability) for name, probability in zip(CLASS_NAMES, probabilities)})
-    elif model is not None:
-        st.info("Upload an image to test the trained model.")
+        result = int(np.argmax(probabilities))
+        confidence = float(probabilities[result])
+        image_columns = st.columns([1.3, .7])
+        image_columns[0].image(original, caption="Uploaded item", use_container_width=True)
+        image_columns[1].image(small.resize((256, 256)), caption="32 × 32 grayscale input", use_container_width=True)
+        image_columns[1].caption("The model receives 1,024 normalized pixel values.")
+        result_columns = st.columns([.55, .45])
+        with result_columns[0]:
+            st.markdown("<div class='panel'>", unsafe_allow_html=True)
+            st.subheader(label(result))
+            st.metric("Model confidence", f"{confidence * 100:.1f}%")
+            if confidence < .70:
+                st.warning("Low-confidence result — manual verification is recommended.")
+            else:
+                st.success("High-confidence model result. Still check local waste rules.")
+            st.markdown("</div>", unsafe_allow_html=True)
+        with result_columns[1]:
+            st.markdown("**Probability comparison**")
+            st.bar_chart({label(i): float(value) for i, value in enumerate(probabilities)})
+            st.caption("The bars are Softmax probabilities and add up to 1.")
 
-with results_tab:
-    st.subheader("Dataset and training output")
-    train_dir = PROJECT_ROOT / "data" / "train"
-    test_dir = PROJECT_ROOT / "data" / "test"
-    if train_dir.exists() and test_dir.exists():
-        train_counts = count_images(train_dir)
-        test_counts = count_images(test_dir)
-        st.dataframe({"Class": [name.replace("_", " ").title() for name in CLASS_NAMES],
-                      "Training images": [train_counts[name] for name in CLASS_NAMES],
-                      "Testing images": [test_counts[name] for name in CLASS_NAMES]}, hide_index=True, use_container_width=True)
-    else:
-        st.info("Run `python download_dataset.py --data-dir data` to display full dataset counts.")
-
-    history_path = OUTPUT_DIR / "training_history.png"
-    confusion_path = OUTPUT_DIR / "confusion_matrix.png"
-    if history_path.exists() and confusion_path.exists():
+elif page == "Experiment results":
+    st.subheader("Dataset and model result")
+    st.dataframe({"Waste category": [label(i) for i in range(3)], "Training images": train_counts, "Testing images": test_counts}, hide_index=True, use_container_width=True)
+    st.caption("The non-recyclable class is smaller than the other categories, which can influence prediction quality.")
+    history, confusion = OUTPUTS / "training_history.png", OUTPUTS / "confusion_matrix.png"
+    if history.exists() and confusion.exists():
         chart_columns = st.columns(2)
-        chart_columns[0].image(str(history_path), caption="Training loss by epoch", use_container_width=True)
-        chart_columns[1].image(str(confusion_path), caption="Test confusion matrix", use_container_width=True)
+        chart_columns[0].image(str(history), caption="Cross-entropy loss during training", use_container_width=True)
+        chart_columns[1].image(str(confusion), caption="Test-set confusion matrix", use_container_width=True)
     else:
-        st.info("Training charts appear here after running train.py.")
+        st.info("Run model training to create result charts.")
 
-with explanation_tab:
-    st.subheader("Information flow in the neural network")
-    st.code("Image (32 × 32) → flatten (1024) → Dense 64 + ReLU → Dense 32 + ReLU → Dense 3 + Softmax")
-    st.markdown("""
-1. The uploaded image is converted to grayscale and resized to **32 × 32**.
-2. Its 1,024 pixel values form the input vector.
-3. Two hidden layers learn patterns using **ReLU** activation.
-4. The output layer uses **Softmax** to produce three probabilities.
-5. During training, backpropagation calculates gradients and gradient descent updates weights and biases.
-    """)
-    st.warning("This is an academic prototype. Check local waste-management guidelines before disposing of any item.")
+else:
+    st.subheader("From image to category")
+    st.markdown("<div class='panel'><h3>32 × 32 image → 1,024 inputs → 64 neurons → 32 neurons → 3 probabilities</h3><p class='small-note'>Each batch is processed with matrix multiplication. ReLU is used in hidden layers and Softmax produces the final probabilities.</p></div>", unsafe_allow_html=True)
+    flow = st.columns(4)
+    flow[0].info("**1. Preprocess**\nResize and grayscale the image.")
+    flow[1].info("**2. Feedforward**\nPass pixels through two hidden layers.")
+    flow[2].info("**3. Softmax**\nConvert scores to probabilities.")
+    flow[3].info("**4. Learn**\nBackpropagation updates weights.")
+    st.warning("This is an educational prototype, not an authoritative disposal decision system.")

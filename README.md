@@ -127,7 +127,9 @@ Train the model first, then start the Streamlit interface:
 streamlit run app.py
 ```
 
-Your browser will open a local presentation page. It lets you upload a waste image, view the predicted category and confidence, show the image transformation to 32 x 32 grayscale, and display your dataset summary and training graphs.
+Your browser will open a custom EcoSort Lab presentation page with image upload, probability comparison, confidence warning, dataset summary, training graphs, and neural-network flow.
+
+Prediction quality is limited by the training data and this basic grayscale MLP. For a fair demo, use a clear photo of one waste item on a plain background, similar to the TrashNet images. Low-confidence results are shown as requiring manual verification.
 
 ## Viva-ready explanation
 
