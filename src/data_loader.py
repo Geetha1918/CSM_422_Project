@@ -1,5 +1,7 @@
 """Image loading utilities with no deep-learning framework dependency."""
 
+from __future__ import annotations
+
 from pathlib import Path
 from typing import Sequence
 
