@@ -15,7 +15,7 @@ import zipfile
 from pathlib import Path
 
 
-DATASET_URL = "https://github.com/garythung/trashnet/raw/master/data/dataset-resized.zip"
+DATASET_URL = "https://huggingface.co/datasets/garythung/trashnet/resolve/main/dataset-resized.zip"
 SOURCE_TO_TARGET = {
     "cardboard": "biodegradable",
     "paper": "biodegradable",
@@ -31,6 +31,24 @@ def find_source_folder(extracted_root: Path, source_name: str) -> Path:
     if not matches:
         raise FileNotFoundError(f"Could not find the '{source_name}' folder in downloaded archive.")
     return matches[0]
+
+
+def download_with_progress(url: str, destination: Path) -> None:
+    """Download the archive while showing progress, rather than appearing frozen."""
+    request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    with urllib.request.urlopen(request, timeout=60) as response, destination.open("wb") as output:
+        total_size = int(response.headers.get("Content-Length", 0))
+        downloaded = 0
+        next_update = 1_000_000
+        while chunk := response.read(1024 * 256):
+            output.write(chunk)
+            downloaded += len(chunk)
+            if downloaded >= next_update or (total_size and downloaded == total_size):
+                if total_size:
+                    print(f"Downloaded {downloaded / 1_000_000:.1f} / {total_size / 1_000_000:.1f} MB", flush=True)
+                else:
+                    print(f"Downloaded {downloaded / 1_000_000:.1f} MB", flush=True)
+                next_update += 1_000_000
 
 
 def copy_split(files: list[Path], target_name: str, data_dir: Path, test_fraction: float) -> None:
@@ -62,8 +80,8 @@ def main() -> None:
     with tempfile.TemporaryDirectory() as temporary_directory:
         temporary_path = Path(temporary_directory)
         archive_path = temporary_path / "trashnet.zip"
-        print("Downloading TrashNet (about 41 MB)...")
-        urllib.request.urlretrieve(DATASET_URL, archive_path)
+        print("Downloading TrashNet (about 43 MB)...", flush=True)
+        download_with_progress(DATASET_URL, archive_path)
         print("Extracting and creating reproducible train/test split...")
         with zipfile.ZipFile(archive_path) as archive:
             archive.extractall(temporary_path / "extracted")
