@@ -119,6 +119,16 @@ python train.py --data-dir data --epochs 50 --batch-size 16 --learning-rate 0.05
 
 Training creates `outputs/training_history.png`, `outputs/confusion_matrix.png`, and `outputs/model_weights.npz`.
 
+## Run the presentation interface
+
+Train the model first, then start the Streamlit interface:
+
+```bash
+streamlit run app.py
+```
+
+Your browser will open a local presentation page. It lets you upload a waste image, view the predicted category and confidence, show the image transformation to 32 x 32 grayscale, and display your dataset summary and training graphs.
+
 ## Viva-ready explanation
 
 1. A **perceptron** combines pixel inputs with weights and a bias. Its sigmoid output represents the probability of recyclable waste in the binary baseline.
