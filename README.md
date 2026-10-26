@@ -2,6 +2,15 @@
 
 A course-focused neural-network project that classifies waste images as **biodegradable**, **recyclable**, or **non-recyclable**. The model is implemented with NumPy so the mathematics behind vectorized feedforward propagation, cross-entropy loss, gradient descent, and backpropagation stays visible.
 
+## What is included
+
+- Complete Python source code for a binary perceptron and a multiclass neural network.
+- `sample_data/`: 27 real waste images (18 training, 9 testing) so the project runs immediately.
+- `download_dataset.py`: a script to download the full dataset for the main experiment.
+- `DATASET_ATTRIBUTION.md`: source and label mapping for the included sample images.
+
+The sample set is only for checking that the code works. It is too small to report as a final accuracy result.
+
 ## Real-life problem
 
 Incorrect waste segregation contaminates recyclable material and increases landfill waste. This project demonstrates how a camera-based classifier could suggest the correct disposal category before a person places an item in a bin. It is an educational prototype, not an automated waste-sorting system.
@@ -88,7 +97,21 @@ pip install -r requirements.txt
 python download_dataset.py --data-dir data
 ```
 
+If you installed the project before this update, run the following once to apply the compatible NumPy version:
+
+```bash
+python -m pip install --upgrade --force-reinstall -r requirements.txt
+```
+
 ## Run training
+
+Quick test with the included images:
+
+```bash
+python train.py --data-dir sample_data --epochs 20 --batch-size 3 --learning-rate 0.05
+```
+
+Main experiment with the full downloaded dataset:
 
 ```bash
 python train.py --data-dir data --epochs 50 --batch-size 16 --learning-rate 0.05
