@@ -27,7 +27,7 @@ SOURCE_TO_TARGET = {
 
 
 def find_source_folder(extracted_root: Path, source_name: str) -> Path:
-    matches = [path for path in extracted_root.rglob(source_name) if path.is_dir()]
+    matches = [path for path in extracted_root.rglob(source_name) if path.is_dir() and "__MACOSX" not in path.parts]
     if not matches:
         raise FileNotFoundError(f"Could not find the '{source_name}' folder in downloaded archive.")
     return matches[0]
@@ -88,7 +88,10 @@ def main() -> None:
         extracted_root = temporary_path / "extracted"
         for source_name, target_name in SOURCE_TO_TARGET.items():
             source_folder = find_source_folder(extracted_root, source_name)
-            images = [path for path in source_folder.iterdir() if path.suffix.lower() in {".jpg", ".jpeg", ".png"}]
+            images = [
+                path for path in source_folder.iterdir()
+                if path.suffix.lower() in {".jpg", ".jpeg", ".png"} and not path.name.startswith("._")
+            ]
             copy_split(images, target_name, data_dir, arguments.test_fraction)
 
     print("Dataset ready.")
